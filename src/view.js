@@ -61,7 +61,7 @@ where events.id between $2 and $3 and event_name = ANY ($4)
 order by events.id limit $5`,
       [consumerName, seq, seq + batchSize, eventNames, batchSize]
     );
-    if (events.rows.length > batchSize / 10) {
+    if (events.rows.length > 0) {
       await client.query('update consumers set seq_id=$1 where name=$2', [events.rows[0].id - 1, consumerName]);
     } else {
       const { rows: [{ max_id = 0 } = {}] = [] } = await client.query('select max(events.id) as max_id from events');
