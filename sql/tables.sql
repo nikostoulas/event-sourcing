@@ -2,7 +2,7 @@ create table if not exists events (
   id bigserial NOT NULL,
   aggregate_id character varying(40) NOT NULL,
   event_name character varying(20) NOT NULL,
-  version smallint NOT NULL,
+  version int NOT NULL,
   data jsonb NOT NULL,
   created_at timestamp without time zone NOT NULL  DEFAULT now(),
   CONSTRAINT idx_events_id PRIMARY KEY (id)
@@ -27,7 +27,7 @@ CREATE OR REPLACE FUNCTION update_updated_at_column()
 create table if not exists aggregates (
     id character varying(40) NOT NULL,
     type character varying(20) NOT NULL,
-    version smallint NOT NULL,
+    version int NOT NULL,
   created_at timestamp without time zone NOT NULL DEFAULT now(),
   updated_at timestamp without time zone NOT NULL DEFAULT now(),
   CONSTRAINT idx_aggregates_id PRIMARY KEY (id)
@@ -42,7 +42,7 @@ CREATE TRIGGER trg_updated_at_aggregates BEFORE UPDATE
 create table if not exists consumer_aggregates (
   aggregate_id character varying(40) NOT NULL,
   name character varying(20) NOT NULL,
-  version smallint NOT NULL,
+  version int NOT NULL,
   created_at timestamp without time zone NOT NULL DEFAULT now(),
   updated_at timestamp without time zone NOT NULL DEFAULT now(),
   CONSTRAINT idx_consumers_id PRIMARY KEY (aggregate_id, name)
