@@ -1,5 +1,6 @@
 const { runInTransaction } = require('./client');
 
+const aggregates = {};
 // select * from events where aggregate_id=$aggregate_id order by version;
 // select * from aggregates where aggregate_id=$aggregate_id;
 module.exports.run = async (aggregateId, type, cmdHandler) => {
@@ -11,8 +12,12 @@ module.exports.run = async (aggregateId, type, cmdHandler) => {
     } else {
       version = aggregate.rows[0].version;
     }
-    console.log('Got last aggregate version', version);
-    const events = await client.query('select * from events where aggregate_id=$1 order by version', [aggregateId]);
+    // console.log('Got last aggregate version', version);
+    const agVersion = aggregates[aggregateId]?.version || -1;
+    const events = await client.query('select * from events where aggregate_id=$1 and version > $2 order by version', [
+      aggregateId,
+      agVersion
+    ]);
     const newEvents = await cmdHandler(aggregateId, events.rows);
     const queries = [];
     let versionIterator = version;
@@ -36,17 +41,26 @@ module.exports.run = async (aggregateId, type, cmdHandler) => {
     if (latestId.rows.length === 0) {
       throw new Error('Conflict');
     }
-    console.log('Committed');
+    // console.log('Committed');
     return aggregateId;
   });
 };
 
 module.exports.handler = (Class, cb) => {
   return (id, events) => {
-    const instance = new Class(id);
+    const instance = aggregates[id] || new Class(id);
     for (const event of events) {
-        instance[event.event_name](event);
+      instance[event.event_name](event);
+      instance.version = event.version;
     }
+    aggregates[id] = instance;
     return cb(instance);
   };
+};
+
+module.exports.getEvents = async id => {
+  return await runInTransaction(async client => {
+    const events = await client.query('select * from events where aggregate_id=$1 order by version', [id]);
+    return events.rows;
+  });
 };
